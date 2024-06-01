@@ -1,0 +1,138 @@
+---
+
+- name: Setup citizen alpha
+  hosts: all
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 7200
+
+    - name: Set timezone to Europe/Berlin
+      community.general.timezone:
+        name: Europe/Berlin
+
+    - name: Start and enable systemd-timesyncd
+      ansible.builtin.service:
+        name: systemd-timesyncd
+        enabled: true
+        state: started
+
+    - name: Add floating IP config
+      register: floating_ip_result
+      ansible.builtin.copy:
+        dest: /etc/network/interfaces.d/zz_citizenalpha
+        content: |
+          auto eth0:1
+          iface eth0:1 inet static
+            address 116.203.8.219
+            netmask 32
+
+          auto eth0:1
+          iface eth0:1 inet6 static
+            address 2a01:4f8:1c0c:813d::1
+            netmask 128
+
+    - name: Restart networking
+      when: floating_ip_result is changed
+      ansible.builtin.service:
+        name: networking
+        state: restarted
+
+    - name: Set root password
+      ansible.builtin.user:
+        name: root
+        password: $6$w/TX/ep8p7M1L16/$hbvDFKHBHkszVMKklFrq/YoahGu10XOS.crjeyhMped4mhOAmDz9d7wc.RYujl8DDOmcgt9xVqYoNn8qmVuks1 # yamllint disable-line
+
+    - name: Create custom sudo rule for user flokoe
+      ansible.builtin.copy:
+        content: "flokoe ALL=(ALL) NOPASSWD: ALL"
+        dest: /etc/sudoers.d/flokoe
+        mode: 0640
+        validate: visudo -cf %s
+
+    - name: Create user flokoe
+      ansible.builtin.user:
+        name: flokoe
+        password: "!"
+        shell: /usr/bin/bash
+
+    - name: Add ssh key to authorized_keys
+      ansible.posix.authorized_key:
+        user: flokoe
+        state: present
+        exclusive: true
+        key: "{{ lookup('file', 'files/flokoe.pub') }}"
+
+    - name: Install packages
+      ansible.builtin.apt:
+        state: present
+        update_cache: true
+        name:
+          - vim
+          - ca-certificates
+          - apt-transport-https
+          - python3-gi
+          - unattended-upgrades
+          - podman
+
+    - name: Enable auto upgrades
+      ansible.builtin.copy:
+        mode: 0640
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Enable "1";
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Download-Upgradeable-Packages "1";
+          APT::Periodic::Unattended-Upgrade "1";
+          APT::Periodic::AutocleanInterval "21";
+
+    - name: Configure unattended-upgrades
+      ansible.builtin.copy:
+        mode: 0640
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades
+        backup: true
+        content: |
+          Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+          Unattended-Upgrade::MinimalSteps "true";
+          Unattended-Upgrade::InstallOnShutdown "true";
+          Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+          Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+          Unattended-Upgrade::Remove-Unused-Dependencies "true";
+          Unattended-Upgrade::Automatic-Reboot "true";
+          Unattended-Upgrade::Automatic-Reboot-Time "03:17";
+
+          Unattended-Upgrade::Origins-Pattern {
+            "origin=Debian,codename=${distro_codename},label=Debian";
+            "origin=Debian,codename=${distro_codename},label=Debian-Security";
+            "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+          };
+
+          Unattended-Upgrade::Package-Blacklist {
+          };
+
+    - name: Hardening sshd
+      register: sshd_result
+      ignore_errors: true
+      ansible.builtin.copy:
+        mode: 0640
+        dest: /etc/ssh/sshd_config.d/zz_citizenalpha.conf
+        # yamllint disable rule:line-length
+        content: |
+          HostKey /etc/ssh/ssh_host_ed25519_key
+          HostKey /etc/ssh/ssh_host_rsa_key
+          KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+          MACs umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com
+          KbdInteractiveAuthentication no
+          MaxAuthTries 3
+          PasswordAuthentication no
+          PermitRootLogin no
+          X11Forwarding no
+        # yamllint enable
+
+    - name: Reload sshd
+      when: sshd_result is changed
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
