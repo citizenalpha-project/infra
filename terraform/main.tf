@@ -47,7 +47,7 @@ resource "hcloud_firewall" "main" {
 }
 
 data "hetznerdns_zone" "citizenalpha_de" {
-    name = "citizenalpha.de"
+  name = "citizenalpha.de"
 }
 
 resource "hcloud_floating_ip" "main_ipv4" {
@@ -64,10 +64,10 @@ resource "hcloud_rdns" "main_ipv4" {
 }
 
 resource "hetznerdns_record" "main_ipv4" {
-    zone_id = data.hetznerdns_zone.citizenalpha_de.id
-    name = "@"
-    value = hcloud_floating_ip.main_ipv4.ip_address
-    type = "A"
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "@"
+  value   = hcloud_floating_ip.main_ipv4.ip_address
+  type    = "A"
 }
 
 resource "hcloud_floating_ip" "main_ipv6" {
@@ -83,11 +83,17 @@ resource "hcloud_rdns" "main_ipv6" {
   dns_ptr        = "citizenalpha.de"
 }
 
+resource "hcloud_rdns" "main_ipv6_1" {
+  floating_ip_id = hcloud_floating_ip.main_ipv6.id
+  ip_address     = "${hcloud_floating_ip.main_ipv6.ip_address}1"
+  dns_ptr        = "citizenalpha.de"
+}
+
 resource "hetznerdns_record" "main_ipv6" {
-    zone_id = data.hetznerdns_zone.citizenalpha_de.id
-    name = "@"
-    value = "${hcloud_floating_ip.main_ipv6.ip_address}1"
-    type = "AAAA"
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "@"
+  value   = "${hcloud_floating_ip.main_ipv6.ip_address}1"
+  type    = "AAAA"
 }
 
 resource "hcloud_server" "soerver" {
@@ -109,10 +115,10 @@ resource "hcloud_rdns" "soerver_ipv4" {
 }
 
 resource "hetznerdns_record" "soerver_ipv4" {
-    zone_id = data.hetznerdns_zone.citizenalpha_de.id
-    name = "soerver"
-    value = hcloud_server.soerver.ipv4_address
-    type = "A"
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "soerver"
+  value   = hcloud_server.soerver.ipv4_address
+  type    = "A"
 }
 
 resource "hcloud_rdns" "soerver_ipv6" {
@@ -122,10 +128,10 @@ resource "hcloud_rdns" "soerver_ipv6" {
 }
 
 resource "hetznerdns_record" "soerver_ipv6" {
-    zone_id = data.hetznerdns_zone.citizenalpha_de.id
-    name = "soerver"
-    value = hcloud_server.soerver.ipv6_address
-    type = "AAAA"
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "soerver"
+  value   = hcloud_server.soerver.ipv6_address
+  type    = "AAAA"
 }
 
 resource "hcloud_floating_ip_assignment" "main_ipv4" {
