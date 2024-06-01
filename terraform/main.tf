@@ -44,6 +44,16 @@ resource "hcloud_firewall" "main" {
       "::/0"
     ]
   }
+
+  rule {
+    direction = "in"
+    protocol  = "udp"
+    port      = "443"
+    source_ips = [
+      "0.0.0.0/0",
+      "::/0"
+    ]
+  }
 }
 
 data "hetznerdns_zone" "citizenalpha_de" {
