@@ -136,3 +136,13 @@
       ansible.builtin.service:
         name: ssh
         state: reloaded
+
+    - name: Create data dir for apps
+      ansible.builtin.file:
+        path: /data
+        state: directory
+
+    - name: Create data dir for apps
+      ansible.builtin.file:
+        path: /var/www
+        state: directory
