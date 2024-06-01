@@ -1,0 +1,4 @@
+citizenalpha.de {
+	root * /srv/citizenalpha.de/www/htdocs
+	file_server
+}
