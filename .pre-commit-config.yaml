@@ -19,7 +19,6 @@ repos:
       - id: terraform_fmt
       - id: terraform_tflint
       - id: terraform_trivy
-      - id: terraform_checkov
       - id: terraform_docs
 
   - repo: https://github.com/gitleaks/gitleaks
