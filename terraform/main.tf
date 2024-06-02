@@ -153,3 +153,51 @@ resource "hcloud_floating_ip_assignment" "main_ipv6" {
   floating_ip_id = hcloud_floating_ip.main_ipv6.id
   server_id      = hcloud_server.soerver.id
 }
+
+resource "hetznerdns_record" "mailbox_org_verify" {
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "556ae8874e5b529b9c59daefd8c6fcde53a46f4f"
+  value   = "f886c1577bda7b15ba3261a2435adf410c3cb967"
+  type    = "TXT"
+}
+
+resource "hetznerdns_record" "mx" {
+  for_each = toset([
+    "10 mxext1.mailbox.org.",
+    "10 mxext2.mailbox.org.",
+    "20 mxext3.mailbox.org."
+  ])
+
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "@"
+  value   = each.value
+  type    = "MX"
+}
+
+resource "hetznerdns_record" "spf" {
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "@"
+  value   = "\"v=spf1 include:mailbox.org ~all\""
+  type    = "TXT"
+}
+
+resource "hetznerdns_record" "dkim" {
+  for_each = toset([
+    "mbo0001",
+    "mbo0002",
+    "mbo0003",
+    "mbo0004"
+  ])
+
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "${each.value}._domainkey"
+  value   = "${each.value}._domainkey.mailbox.org."
+  type    = "CNAME"
+}
+
+resource "hetznerdns_record" "dmarc" {
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "_dmarc"
+  value   = "\"v=DMARC1;p=none;rua=mailto:postmaster@citizenalpha.de\""
+  type    = "TXT"
+}
