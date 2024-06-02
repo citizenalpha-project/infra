@@ -4,10 +4,10 @@
   hosts: all
 
   tasks:
-    - name: Get info about caddy_connect network
-      register: caddy_connect_network_info
-      containers.podman.podman_network_info:
+    - name: Create podman network with dns
+      containers.podman.podman_network:
         name: caddy_connect
+        state: present
 
     - name: Create caddy directories
       ansible.builtin.file:
@@ -31,17 +31,12 @@
         image: "docker.io/caddy:2.7.6-alpine@sha256:2e1d4592f1718bb47645da5a83a846fe19094f18e6c921fdf56d174f05c63213" # yamllint disable-line
         image_strict: true
         state: started
-        network: host
-        dns:
-          - "{{ caddy_connect_network_info.networks.0.subnets.0.gateway }}"
-          - "185.12.64.1"
-        dns_search: dns.podman
+        network:
+          - caddy_connect
         publish:
           - "80:80"
           - "443:443"
           - "443:443/udp"
-        restart_policy: always
-        # healthcheck: http://localhost:8080
         volumes:
           - /data/caddy/Caddyfile:/etc/caddy/Caddyfile
           - /data/caddy/data:/data
@@ -63,3 +58,32 @@
         - citizenalpha.de
         - citizenalpha.de/www
         - citizenalpha.de/www/htdocs
+
+    - name: Add deploy user for website
+      ansible.builtin.user:
+        name: deploy-website
+        state: present
+        password: "!"
+        shell: /usr/bin/sh
+        create_home: true
+
+    - name: Add ssh key to deploy-website
+      ansible.posix.authorized_key:
+        user: deploy-website
+        state: present
+        exclusive: true
+        key: "{{ lookup('file', 'files/deploy-website.pub') }}"
+
+    - name: Make deploy-website owner of website
+      ansible.builtin.file:
+        path: "/var/www/citizenalpha.de/www/htdocs"
+        owner: deploy-website
+        group: deploy-website
+
+    - name: Create bind-mount for htdocs of citizenalpha.de
+      ansible.builtin.mount:
+        src: /var/www/citizenalpha.de/www/htdocs
+        path: /home/deploy-website/htdocs
+        fstype: none
+        opts: bind
+        state: mounted
