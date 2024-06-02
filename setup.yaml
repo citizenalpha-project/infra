@@ -149,8 +149,3 @@
       ansible.builtin.file:
         path: /var/www
         state: directory
-
-    - name: Create podman network with dns
-      containers.podman.podman_network:
-        name: caddy_connect
-        state: present
