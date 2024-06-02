@@ -201,3 +201,10 @@ resource "hetznerdns_record" "dmarc" {
   value   = "\"v=DMARC1;p=none;rua=mailto:postmaster@citizenalpha.de\""
   type    = "TXT"
 }
+
+resource "hetznerdns_record" "www" {
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "www"
+  value   = "${data.hetznerdns_zone.citizenalpha_de.name}."
+  type    = "CNAME"
+}
