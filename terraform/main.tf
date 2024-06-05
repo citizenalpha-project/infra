@@ -208,3 +208,10 @@ resource "hetznerdns_record" "www" {
   value   = "${data.hetznerdns_zone.citizenalpha_de.name}."
   type    = "CNAME"
 }
+
+resource "hetznerdns_record" "offen" {
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "offen"
+  value   = "${data.hetznerdns_zone.citizenalpha_de.name}."
+  type    = "CNAME"
+}
