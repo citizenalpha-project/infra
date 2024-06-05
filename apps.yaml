@@ -223,6 +223,7 @@
           - /data/offen/offen.env
         network:
           - caddy_connect
+          - chasquid_connect
         volumes:
           - "/data/offen/data:/var/opt/offen"
 
