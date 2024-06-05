@@ -3,6 +3,16 @@
 - name: Deploy all apps via Podman container
   hosts: all
 
+  vars:
+    hetzner_api_key: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      39323230633062363338333539313936313161663038313634643466313239373533393138353230
+      6135633165613234613363343038333130346434326232360a386364393735373361656236626362
+      66653930383631643938623263363530313539616631356136616564326631393065343464373839
+      3863383166386133640a363131396331313733376135306563663931646634613566376335623936
+      32363061336661613163333364346530353938396538626265393261626261393466666139613839
+      3061376535376533623564656237316435393130626338386565
+
   tasks:
     - name: Create podman network for caddy
       containers.podman.podman_network:
@@ -87,6 +97,101 @@
         fstype: none
         opts: bind
         state: mounted
+
+    - name: Create podman network for chasquid
+      containers.podman.podman_network:
+        name: chasquid_connect
+        state: present
+
+    - name: Create casquid directories
+      ansible.builtin.file:
+        path: "/data/{{ item }}"
+        state: directory
+      loop:
+        - "chasquid_conf"
+        - "chasquid_conf/certs"
+        - "chasquid_conf/certs/citizenalpha.de"
+        - "chasquid_conf/domains"
+        - "chasquid_conf/domains/citizenalpha.de"
+        - "chasquid_data"
+        - "lego"
+
+    - name: Copy Chasquid config
+      register: chasquid_result
+      ansible.builtin.copy:
+        src: chasquid.conf
+        dest: /data/chasquid_conf/chasquid.conf
+
+    - name: Copy Chasquid dkim key
+      ansible.builtin.copy:
+        src: chasquid_dkim_20240605.pem
+        dest: "/data/chasquid_conf/domains/citizenalpha.de/dkim:20240605.pem"
+        mode: 0640
+
+    - name: Copy Chasquid user db
+      ansible.builtin.copy:
+        src: chasquid_citizenalpha_de_user_db
+        dest: /data/chasquid_conf/domains/citizenalpha.de/users
+        mode: 0640
+
+    - name: Check presence of chasquid certificate
+      ansible.builtin.stat:
+        path: /data/lego/certificates/citizenalpha.de.crt
+      register: chasquid_cert_result
+
+    - name: Create chasquid certificate
+      when: not chasquid_cert_result.stat.exists
+      register: lego_result
+      containers.podman.podman_container:
+        name: lego
+        image: docker.io/goacme/lego:latest
+        command:
+          - --email
+          - hallo@citizenalpha.de
+          - --accept-tos
+          - --dns
+          - hetzner
+          - -d
+          - citizenalpha.de
+          - run
+        state: started
+        env:
+          HETZNER_API_KEY: "{{ hetzner_api_key }}"
+        volumes:
+          - "/data/lego:/.lego"
+
+    - name: Copy chasquid certificate
+      when: lego_result is changed
+      ansible.builtin.copy:
+        remote_src: /data/lego/certificates/citizenalpha.de.crt
+        dest: /data/chasquid_conf/certs/citizenalpha.de/fullchain.pem
+        mode: 0600
+
+    - name: Copy chasquid certificate key
+      when: lego_result is changed
+      ansible.builtin.copy:
+        remote_src: /data/lego/certificates/citizenalpha.de.key
+        dest: /data/chasquid_conf/certs/citizenalpha.de/privkey.pem
+        mode: 0600
+
+    - name: Ensure Chasquid is running
+      register: chasquid_container_result
+      containers.podman.podman_container:
+        name: chasquid
+        image: "ghcr.io/citizenalpha-project/chasquid:latest"
+        image_strict: true
+        state: started
+        network:
+          - chasquid_connect
+        volumes:
+          - "/data/chasquid_data:/var/lib/chasquid"
+          - "/data/chasquid_conf:/etc/chasquid"
+
+    - name: Restart Chasquid
+      when: chasquid_result is changed and chasquid_container_result is not changed # yamllint disable-line
+      containers.podman.podman_container_exec:
+        name: chasquid
+        force_restart: true
 
     - name: Create offen directories
       ansible.builtin.file:

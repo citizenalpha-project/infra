@@ -79,6 +79,8 @@
           - aardvark-dns
           - podman
           - jq
+          - swaks
+          - libnet-ssleay-perl
 
     - name: Enable auto upgrades
       ansible.builtin.copy:

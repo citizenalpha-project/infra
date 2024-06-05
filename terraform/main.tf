@@ -177,7 +177,7 @@ resource "hetznerdns_record" "mx" {
 resource "hetznerdns_record" "spf" {
   zone_id = data.hetznerdns_zone.citizenalpha_de.id
   name    = "@"
-  value   = "\"v=spf1 include:mailbox.org ~all\""
+  value   = "\"v=spf1 a include:mailbox.org ~all\""
   type    = "TXT"
 }
 
@@ -214,4 +214,11 @@ resource "hetznerdns_record" "offen" {
   name    = "offen"
   value   = "${data.hetznerdns_zone.citizenalpha_de.name}."
   type    = "CNAME"
+}
+
+resource "hetznerdns_record" "chasquid_dkim" {
+  zone_id = data.hetznerdns_zone.citizenalpha_de.id
+  name    = "20240605._domainkey"
+  value   = "\"v=DKIM1; k=rsa; p=MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEApmcstRdumddnWtYblAX8E48iIsD2RRG+SKNHJJ0Gf+/je/bznbKizBLcqrgWqJuVlDXo/85BVVXE8O31L5Vn0WtpSOKShTtP0bVOvLJm9CobmN3IUt7vcsxkI7I2Dd8F1WmXB/IHLn876X0GGtr87cSDM+JWXzPrZ4q6C2808/11bY/qlEKhGkP9BhIUrGEb6\" \"ezTi3B1FbI2kBt785PNVCOKZbIFy082xd2ZYbxCP8f/u4Nn8FQW9qBm94GBSd/UCboucXXnthPpQ3/SybDHnerqsSpui8XRcFei0Gk5xz2sMqi0pDQRfVRxc6fWJzdp9td1xYhFRlo5QXcroV4hXkkFIFbkwRf16FzasXxZf5sit+6u0ijmoes5XEPWdH6OymPrcApghjLbTNAffYSmaZDXHNedlke59iCUb7WW1iHcpP8/5PoPYYUb04qYOMTI\" \"nH15cknyyMr872mBkRmq04KAcESyFqWXKRDG4XQ7pioW2p24Vy6J+o1okvF51w6lAgMBAAE=\" "
+  type    = "TXT"
 }
