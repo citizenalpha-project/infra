@@ -1,6 +1,7 @@
 citizenalpha.de {
 	root * /srv/citizenalpha.de/www/htdocs
 	templates
+	encode zstd gzip
 	file_server
 
 	header {
@@ -10,4 +11,10 @@ citizenalpha.de {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 	}
+
+	@only-assets {
+		not path /*.html /sitemap*
+	}
+
+	header @only-assets Cache-Control "public, max-age=604800"
 }
