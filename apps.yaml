@@ -4,7 +4,7 @@
   hosts: all
 
   tasks:
-    - name: Create podman network with dns
+    - name: Create podman network for caddy
       containers.podman.podman_network:
         name: caddy_connect
         state: present
@@ -87,3 +87,43 @@
         fstype: none
         opts: bind
         state: mounted
+
+    - name: Create offen directories
+      ansible.builtin.file:
+        path: "/data/offen"
+        state: directory
+
+    - name: Create offen directories 2
+      ansible.builtin.file:
+        path: "/data/offen/data"
+        state: directory
+        owner: 10000
+        group: 10001
+
+    - name: Copy Offen env file
+      register: offen_env_result
+      ansible.builtin.copy:
+        src: offen.env
+        dest: /data/offen/offen.env
+        mode: 0600
+
+    - name: Ensure Offen is running
+      register: offen_container_result
+      containers.podman.podman_container:
+        name: offen
+        image: "docker.io/offen/offen:v1.4.2@sha256:4a69f8cbcdbff26505e728ad803a9b8ff6752bd10330749633bc507276e52c5d" # yamllint disable-line
+        image_strict: true
+        state: started
+        env_file:
+          - /data/offen/offen.env
+        network:
+          - caddy_connect
+        volumes:
+          - "/data/offen/data:/var/opt/offen"
+
+    - name: Restart Offen
+      when: offen_env_result is changed and offen_container_result is not changed # yamllint disable-line
+      containers.podman.podman_container:
+        name: offen
+        state: started
+        force_restart: true

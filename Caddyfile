@@ -5,7 +5,7 @@ citizenalpha.de {
 	file_server
 
 	header {
-		Content-Security-Policy "default-src 'self'; script-src 'strict-dynamic' 'nonce-{http.request.uuid}'; form-action 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; require-trusted-types-for 'script';"
+		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'strict-dynamic' 'nonce-{http.request.uuid}'; frame-src https://offen.citizenalpha.de; form-action 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none';"
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 		Referrer-Policy strict-origin-when-cross-origin
 		X-Content-Type-Options nosniff
@@ -17,4 +17,21 @@ citizenalpha.de {
 	}
 
 	header @only-assets Cache-Control "public, max-age=604800"
+}
+
+offen.citizenalpha.de {
+	reverse_proxy http://offen:4000
+	encode zstd gzip
+
+	header {
+		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; form-action 'none'; object-src 'none'; frame-ancestors 'self' https:; base-uri 'none';"
+		>Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		>Referrer-Policy strict-origin-when-cross-origin
+		>X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+
+		Access-Control-Allow-Origin "*"
+	}
+
+	header /script.js >Cache-Control "public, max-age=172800"
 }
