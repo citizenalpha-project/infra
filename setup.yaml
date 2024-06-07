@@ -81,6 +81,7 @@
           - jq
           - swaks
           - libnet-ssleay-perl
+          - catatonit
 
     - name: Enable auto upgrades
       ansible.builtin.copy:

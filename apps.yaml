@@ -12,6 +12,24 @@
       3863383166386133640a363131396331313733376135306563663931646634613566376335623936
       32363061336661613163333364346530353938396538626265393261626261393466666139613839
       3061376535376533623564656237316435393130626338386565
+    lynx_database_password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      64663261373034653362636365643663366530346139643436356438363439333736663933663561
+      6334306234333039356366353233373564626230313430630a373766623361613363663861343863
+      38326531663165646262393865303666633635653834316263316438323936663431643063306633
+      3334316337366563390a363333313633326133366630386265653639616433306135376530303334
+      65383564323631303033356238333664366536653330653034643636646439376534
+    lynx_app_secret: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      31633735626337393239343966353963336534346361363337346432306561623634386430383137
+      3665633731383337373136623637333864396665353138380a313865663932396562363638353363
+      63306165636639326339353837383538393836353130333837366538613836303433343133653765
+      6536663861643765650a326634376234356364616437656134343465653237303761656532643035
+      35616539376565306164313631393762353039613938353633373836623431363162316461306235
+      65386430333239356632336639653230346164393537343838373436303539323630333935386336
+      66336363376331316138393362393238653036383364303230303837646563356531316436313065
+      65643233613861333039626135326332353235326661323765346263313230656436326337633535
+      6231
 
   tasks:
     - name: Create podman network for caddy
@@ -233,3 +251,58 @@
         name: offen
         state: started
         force_restart: true
+
+    - name: Create Lynx directories
+      ansible.builtin.file:
+        path: "/data/lynxdb"
+        state: directory
+
+    - name: Create Lynx network
+      containers.podman.podman_network:
+        name: lynx_connect
+        state: present
+
+    - name: Create Lynx database
+      containers.podman.podman_container:
+        name: lynxdb
+        image: "docker.io/postgres:16.3-alpine@sha256:d037653693c4168efbb95cdc1db705d31278a4a8d608d133eca1f07af9793960" # yamllint disable-line
+        image_strict: true
+        state: started
+        network:
+          - lynx_connect
+        env:
+          POSTGRES_USER: lynx
+          POSTGRES_PASSWORD: "{{ lynx_database_password }}"
+          POSTGRES_DB: lynx
+        volumes:
+          - "/data/lynxdb:/var/lib/postgresql/data"
+
+    - name: Ensure Lynx is running
+      register: lynx_container_result
+      containers.podman.podman_container:
+        name: lynx
+        image: "docker.io/clivern/lynx:0.11.9@sha256:42fb8ad273d2e2eb09961fdfd4b9cfca00aea59a4a6877a2682537f3308087cc" # yamllint disable-line
+        image_strict: true
+        command:
+          - "sh"
+          - "-c"
+          - "/app/bin/migrate && /app/bin/server"
+        state: started
+        env:
+          APP_NAME: Lynx
+          APP_PORT: 4000
+          APP_SECRET: "{{ lynx_app_secret }}"
+          APP_HOST: localhost
+          APP_HTTP_SCHEMA: http
+          DB_USERNAME: lynx
+          DB_PASSWORD: "{{ lynx_database_password }}"
+          DB_HOSTNAME: lynxdb
+          DB_DATABASE: lynx
+          DB_PORT: 5432
+          DB_SSL: null
+          DB_CA_CERTFILE_PATH: null
+          MIX_ENV: prod
+        network:
+          - caddy_connect
+          - chasquid_connect
+          - lynx_connect

@@ -35,3 +35,9 @@ offen.citizenalpha.de {
 
 	header /script.js >Cache-Control "public, max-age=172800"
 }
+
+lynx.citizenalpha.de {
+	reverse_proxy http://lynx:4000
+
+	header >Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+}
